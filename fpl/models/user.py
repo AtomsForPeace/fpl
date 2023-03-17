@@ -111,7 +111,7 @@ class User():
       from fpl import FPL
         import aiohttp
         import asyncio
-      
+
         async def main():
             async with aiohttp.ClientSession() as session:
                 fpl = FPL(session)
@@ -351,7 +351,7 @@ class User():
             tasks = [asyncio.ensure_future(
                      fetch(self._session,
                            API_URLS["user_picks"].format(self.id, gameweek)))
-                     for gameweek in range(self.started_event, 
+                     for gameweek in range(self.started_event,
                                            self.current_event + 1)]
             picks = await asyncio.gather(*tasks)
             self._picks = picks
@@ -384,9 +384,14 @@ class User():
         except aiohttp.client_exceptions.ClientResponseError:
             raise Exception("User ID does not match provided email address!")
 
+        print(API_URLS["user_team"].format(self.id))
+        print("https://fantasy.premierleague.com/api/entry/578298/")
+        _response = await fetch(
+            self._session, "https://fantasy.premierleague.com/api/entry/578298/")
+        print(_response)
         if response.get("detail") == "Not found.":
             raise Exception("Data not found. Please ensure user ID matches provided email address.")
-        
+
         return response["picks"]
 
     async def get_chips(self):

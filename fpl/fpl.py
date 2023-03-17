@@ -24,7 +24,6 @@ Fantasy Premier League API:
 * /transfers
 """
 import asyncio
-import certifi
 import itertools
 import json
 import os
@@ -588,9 +587,9 @@ class FPL:
         async with self.session.post(login_url, data=payload,
                                      ssl=ssl_context,
                                      headers={"User-Agent": "Dalvik/2.1.0 (Linux; U; Android 5.1; PRO 5 Build/LMY47D)"}) as response:
-            state = response.url.query["state"]
-            if state == "fail":
-                reason = response.url.query["reason"]
+            state = response.url.query.get("state")
+            if not state or state == "fail":
+                reason = response.url.query.get("reason", "Unknown")
                 raise ValueError(f"Login not successful, reason: {reason}")
 
     async def get_points_against(self):
@@ -791,3 +790,31 @@ class FPL:
         fdr = calculate_fdr(average_points, extrema)
 
         return fdr
+
+    async def get_gameweek_player_scores(
+        self, gameweek_id, include_live=False, return_json=False
+    ):
+        static_gameweeks = getattr(self, "events")
+
+        try:
+            static_gameweek = next(
+                gameweek for gameweek in static_gameweeks.values() if
+                gameweek["id"] == gameweek_id)
+        except StopIteration:
+            raise ValueError(f"Gameweek with ID {gameweek_id} not found")
+
+        if include_live:
+            live_gameweek = await fetch(
+                self.session, API_URLS["gameweek_live"].format(gameweek_id))
+
+            # Convert element list to dict
+            live_gameweek["elements"] = {
+                element["id"]: element for element in live_gameweek["elements"]}
+            return live_gameweek
+
+    async def get_picks(self, gameweek_id: int, user_id: int):
+        picks = await fetch(
+            self.session, API_URLS["user_picks"].format(user_id, gameweek_id))
+        if picks == {'detail': 'Not found.'}:
+            return {'picks': []}
+        return picks
